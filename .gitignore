@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.pdf
+savegame.json
+game.db
+chat.db
+*.db
+.env

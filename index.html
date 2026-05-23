@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Resumatch — AI Resume Analyzer</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #f7f6f3;
+      --surface: #ffffff;
+      --border: #e8e6e1;
+      --text: #1a1916;
+      --muted: #8a8680;
+      --accent: #1a1916;
+      --accent-light: #f0efe9;
+      --green: #1a6b3c;
+      --green-bg: #edf7f1;
+      --red: #c0392b;
+      --red-bg: #fdf0ee;
+      --blue: #1a4a8a;
+      --blue-bg: #edf2fc;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      letter-spacing: -0.3px;
+      color: var(--text);
+    }
+
+    .logo span { color: var(--muted); font-style: italic; }
+
+    .nav-badge {
+      font-size: 12px;
+      background: var(--accent-light);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 72px 24px 56px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--green);
+      background: var(--green-bg);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    .hero-tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 44px;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+
+    /* ── Main layout ── */
+    .main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      text-align: center;
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--text);
+      background: var(--accent-light);
+    }
+
+    .upload-zone.has-file {
+      border-style: solid;
+      border-color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .upload-zone input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .upload-zone p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .upload-zone .file-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--green);
+      margin-top: 8px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      resize: vertical;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: var(--text); }
+    textarea::placeholder { color: var(--muted); }
+
+    /* ── Button ── */
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: var(--text);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: -0.2px;
+      margin-bottom: 16px;
+    }
+
+    .btn-primary:hover { background: #2d2c28; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { background: #c5c3be; cursor: not-allowed; transform: none; }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover { background: var(--accent-light); border-color: var(--text); }
+
+    .btn-green {
+      background: var(--green-bg);
+      color: var(--green);
+      border-color: #b8dfc8;
+    }
+
+    .btn-green:hover { background: #d5eedf; border-color: var(--green); }
+
+    .btn-blue {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border-color: #b8cef0;
+    }
+
+    .btn-blue:hover { background: #d5e3f8; border-color: var(--blue); }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading p { color: var(--muted); font-size: 14px; }
+
+    /* ── Results ── */
+    #results { display: none; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-top: 8px;
+    }
+
+    .results-header h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 24px;
+      letter-spacing: -0.5px;
+    }
+
+    /* ── Score ── */
+    .score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .score-circle {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      flex-shrink: 0;
+    }
+
+    .score-circle svg {
+      transform: rotate(-90deg);
+      width: 100px;
+      height: 100px;
+    }
+
+    .score-circle .track {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 6;
+    }
+
+    .score-circle .fill {
+      fill: none;
+      stroke: var(--text);
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-dasharray: 251;
+      stroke-dashoffset: 251;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .score-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Serif Display', serif;
+      font-size: 26px;
+      color: var(--text);
+    }
+
+    .score-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .score-info p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── Tags ── */
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .tag {
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-weight: 400;
+    }
+
+    .tag-red { background: var(--red-bg); color: var(--red); }
+    .tag-blue { background: var(--blue-bg); color: var(--blue); }
+
+    /* ── Improvement items ── */
+    .improvement-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    .improvement-item:last-child { border-bottom: none; }
+
+    .improvement-item::before {
+      content: '→';
+      color: var(--green);
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Rewritten CV preview ── */
+    .cv-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      font-size: 13px;
+      color: var(--muted);
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      font-family: 'DM Sans', sans-serif;
+      margin-bottom: 16px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Cover letter ── */
+    .cover-letter-text {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #333;
+      white-space: pre-wrap;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    /* ── Section divider ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 16px;
+    }
+
+    .section-divider span {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .section-divider::before,
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Animations ── */
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Resu<span>match</span></div>
+  <span class="nav-badge">Powered by AI</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Free to use</div>
+  <h1>Your CV, <em>tailored</em><br>for every job</h1>
+  <p>Upload your CV, paste a job description, and get an instant AI analysis with a rewritten CV and cover letter.</p>
+</div>
+
+<div class="main">
+
+  <!-- Upload -->
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="cv-file" accept=".pdf" onchange="handleFile(this)" />
+    <div class="upload-icon">📄</div>
+    <h3>Drop your CV here</h3>
+    <p>PDF format · Click or drag to upload</p>
+    <div class="file-name" id="file-name" style="display:none;"></div>
+  </div>
+
+  <!-- Job description -->
+  <div class="card">
+    <div class="card-label">Job Description</div>
+    <textarea id="job-desc" placeholder="Paste the full job description here — the more detail, the better the match..."></textarea>
+  </div>
+
+  <!-- Analyze button -->
+  <button class="btn-primary" onclick="analyze()" id="analyze-btn">
+    Analyze & Optimize My CV
+  </button>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Analyzing your CV against the job description...</p>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="results-header fade-in">
+      <h2>Analysis Complete</h2>
+    </div>
+
+    <!-- Score -->
+    <div class="score-card fade-in">
+      <div class="score-circle">
+        <svg viewBox="0 0 100 100">
+          <circle class="track" cx="50" cy="50" r="40"/>
+          <circle class="fill" id="score-fill" cx="50" cy="50" r="40"/>
+        </svg>
+        <div class="score-number" id="score-number">0%</div>
+      </div>
+      <div class="score-info">
+        <h3 id="score-label">Match Score</h3>
+        <p id="score-desc">Your CV has been analyzed against the job requirements.</p>
+      </div>
+    </div>
+
+    <!-- Missing skills -->
+    <div class="card fade-in">
+      <div class="card-label">Missing Skills</div>
+      <div class="tags" id="missing-skills"></div>
+    </div>
+
+    <!-- Improvements -->
+    <div class="card fade-in">
+      <div class="card-label">What Was Improved</div>
+      <div id="improvements"></div>
+    </div>
+
+    <!-- Rewritten CV -->
+    <div class="card fade-in">
+      <div class="card-label">Rewritten CV</div>
+      <div class="cv-preview" id="rewritten-cv"></div>
+      <div class="action-row">
+        <button class="btn-secondary btn-green" onclick="downloadCV()">
+          ↓ Download CV as PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Cover Letter -->
+    <div class="card fade-in">
+      <div class="card-label">Cover Letter</div>
+      <div class="cover-letter-text" id="cover-letter"></div>
+      <div class="action-row" id="cover-actions">
+        <button class="btn-secondary" onclick="generateCoverLetter()" id="gen-cl-btn">
+          ✦ Generate Cover Letter
+        </button>
+      </div>
+      <div class="action-row" id="cover-download-row" style="display:none; margin-top: 10px;">
+        <button class="btn-secondary btn-green" onclick="downloadCoverLetter()">
+          ↓ Download as PDF
+        </button>
+        <button class="btn-secondary" onclick="copyCoverLetter()" id="copy-btn">
+          Copy Text
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let rewrittenCV = "";
+  let jobDescSnapshot = "";
+
+  function handleFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const zone = document.getElementById("upload-zone");
+    const nameEl = document.getElementById("file-name");
+    zone.classList.add("has-file");
+    nameEl.style.display = "block";
+    nameEl.textContent = "✓ " + file.name;
+    document.querySelector(".upload-zone h3").textContent = "CV uploaded";
+    document.querySelector(".upload-zone p").textContent = "Click to change file";
+  }
+
+  function setScore(score) {
+    const circumference = 251;
+    const offset = circumference - (score / 100) * circumference;
+    document.getElementById("score-fill").style.strokeDashoffset = offset;
+    document.getElementById("score-number").textContent = score + "%";
+
+    let label, desc, color;
+    if (score >= 80) {
+      label = "Strong Match"; desc = "Your CV is well-aligned with this role."; color = "#1a6b3c";
+    } else if (score >= 60) {
+      label = "Good Match"; desc = "A few tweaks and you're a strong candidate."; color = "#b45309";
+    } else {
+      label = "Needs Work"; desc = "The rewritten CV below significantly improves your chances."; color = "#c0392b";
+    }
+
+    document.getElementById("score-label").textContent = label;
+    document.getElementById("score-desc").textContent = desc;
+    document.getElementById("score-fill").style.stroke = color;
+    document.getElementById("score-number").style.color = color;
+  }
+
+  async function analyze() {
+    const file = document.getElementById("cv-file").files[0];
+    const jobDesc = document.getElementById("job-desc").value.trim();
+
+    if (!file) { alert("Please upload your CV first."); return; }
+    if (!jobDesc) { alert("Please paste a job description."); return; }
+
+    jobDescSnapshot = jobDesc;
+
+    document.getElementById("analyze-btn").disabled = true;
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("results").style.display = "none";
+
+    const formData = new FormData();
+    formData.append("cv", file);
+    formData.append("job_description", jobDesc);
+
+    try {
+      const res = await fetch("/analyze", { method: "POST", body: formData });
+      const data = await res.json();
+
+      setTimeout(() => setScore(data.match_score), 100);
+
+      document.getElementById("missing-skills").innerHTML =
+        data.missing_skills.map(s => `<span class="tag tag-red">${s}</span>`).join("");
+
+      document.getElementById("improvements").innerHTML =
+        data.improvements.map(i => `<div class="improvement-item">${i}</div>`).join("");
+
+      document.getElementById("rewritten-cv").textContent =
+        typeof data.rewritten_cv === "object"
+          ? JSON.stringify(data.rewritten_cv, null, 2)
+          : data.rewritten_cv;
+
+      rewrittenCV = data.rewritten_cv;
+
+      document.getElementById("cover-letter").style.display = "none";
+      document.getElementById("cover-download-row").style.display = "none";
+      document.getElementById("gen-cl-btn").textContent = "✦ Generate Cover Letter";
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("results").style.display = "block";
+
+    } catch (e) {
+      alert("Something went wrong. Please try again.");
+      console.error(e);
+    }
+
+    document.getElementById("analyze-btn").disabled = false;
+  }
+
+  async function downloadCV() {
+    const res = await fetch("/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rewritten_cv: rewrittenCV })
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "rewritten_cv.pdf"; a.click();
+  }
+
+  async function generateCoverLetter() {
+    if (!rewrittenCV) { alert("Please analyze your CV first."); return; }
+
+    const btn = document.getElementById("gen-cl-btn");
+    btn.textContent = "Generating...";
+    btn.disabled = true;
+
+    const clDiv = document.getElementById("cover-letter");
+    clDiv.style.display = "block";
+    clDiv.textContent = "Writing your cover letter...";
+
+    const res = await fetch("/cover-letter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cv: rewrittenCV, job_description: jobDescSnapshot })
+    });
+
+    const data = await res.json();
+    clDiv.textContent = data.cover_letter;
+    document.getElementById("cover-download-row").style.display = "flex";
+    btn.textContent = "✦ Regenerate";
+    btn.disabled = false;
+  }
+
+  async function downloadCoverLetter() {
+    const text = document.getElementById("cover-letter").textContent;
+    const res = await fetch("/download-cover-letter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cover_letter: text })
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "cover_letter.pdf"; a.click();
+  }
+
+  async function copyCoverLetter() {
+    const text = document.getElementById("cover-letter").textContent;
+    await navigator.clipboard.writeText(text);
+    const btn = document.getElementById("copy-btn");
+    btn.textContent = "Copied!";
+    setTimeout(() => btn.textContent = "Copy Text", 2000);
+  }
+</script>
+</body>
+</html>
