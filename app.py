@@ -9,6 +9,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.units import inch
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -27,10 +30,24 @@ def analyze():
     for page in pdf:
         cv_text += page.get_text()
 
+    original_score_response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are a recruiter. Score how well this CV matches the job description from 0-100. Respond with a single number only, nothing else."},
+            {"role": "user", "content": f"CV:\n{cv_text}\n\nJOB DESCRIPTION:\n{job_description}"}
+        ],
+        temperature=0,
+        max_tokens=5
+    )
+    try:
+        original_score = int(original_score_response.choices[0].message.content.strip())
+    except:
+        original_score = 0
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-         {"role": "system", "content": """You are an aggressive CV optimizer and expert recruiter.
+            {"role": "system", "content": """You are an aggressive CV optimizer and expert recruiter.
 Your job is to REWRITE the CV to maximize the candidate's match for the specific job description.
 
 You MUST:
@@ -96,6 +113,7 @@ Respond in valid JSON only, no backticks, using this exact format:
         clean = re.sub(r'[\x00-\x1f\x7f]', ' ', clean)
         result = json.loads(clean)
 
+    result["original_score"] = original_score
     return jsonify(result)
 
 @app.route("/download", methods=["POST"])
@@ -229,6 +247,78 @@ Return only the cover letter text, nothing else."""},
     letter = response.choices[0].message.content
     return jsonify({"cover_letter": letter})
 
+@app.route("/ats-check", methods=["POST"])
+def ats_check():
+    data = request.json
+    cv = data["cv"]
+    job_description = data["job_description"]
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": """You are an ATS (Applicant Tracking System) expert.
+Analyze the CV for ATS compatibility and keyword matching against the job description.
+Respond in valid JSON only, no backticks, using this exact format:
+{
+    "ats_score": 85,
+    "keyword_matches": ["keyword1", "keyword2"],
+    "keyword_missing": ["keyword1", "keyword2"],
+    "formatting_issues": ["issue1", "issue2"],
+    "formatting_good": ["good thing1", "good thing2"],
+    "verdict": "one sentence overall verdict"
+}"""},
+            {"role": "user", "content": f"CV:\n{json.dumps(cv)}\n\nJOB DESCRIPTION:\n{job_description}"}
+        ],
+        temperature=0.3,
+        max_tokens=800
+    )
+
+    raw = response.choices[0].message.content
+    clean = raw.replace("```json", "").replace("```", "").strip()
+    try:
+        result = json.loads(clean)
+    except:
+        clean = re.sub(r'[\x00-\x1f\x7f]', ' ', clean)
+        result = json.loads(clean)
+
+    return jsonify(result)
+
+@app.route("/interview-questions", methods=["POST"])
+def interview_questions():
+    data = request.json
+    cv = data["cv"]
+    job_description = data["job_description"]
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": """You are an expert interview coach.
+Based on the CV and job description generate the 8 most likely interview questions with strong suggested answers.
+Respond in valid JSON only, no backticks, using this exact format:
+{
+    "questions": [
+        {
+            "question": "Tell me about yourself",
+            "answer": "Suggested answer tailored to this specific role and CV"
+        }
+    ]
+}"""},
+            {"role": "user", "content": f"CV:\n{json.dumps(cv)}\n\nJOB DESCRIPTION:\n{job_description}"}
+        ],
+        temperature=0.7,
+        max_tokens=2000
+    )
+
+    raw = response.choices[0].message.content
+    clean = raw.replace("```json", "").replace("```", "").strip()
+    try:
+        result = json.loads(clean)
+    except:
+        clean = re.sub(r'[\x00-\x1f\x7f]', ' ', clean)
+        result = json.loads(clean)
+
+    return jsonify(result)
+
 @app.route("/download-cover-letter", methods=["POST"])
 def download_cover_letter():
     text = request.json["cover_letter"]
@@ -239,7 +329,7 @@ def download_cover_letter():
                             topMargin=inch, bottomMargin=inch)
 
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_RIGHT
+    from datetime import date
 
     styles = getSampleStyleSheet()
 
@@ -252,9 +342,7 @@ def download_cover_letter():
                                    spaceBefore=20, spaceAfter=40,
                                    textColor=colors.HexColor("#1a1a1a"))
 
-    from datetime import date
     today = date.today().strftime("%B %d, %Y")
-
     story = []
     story.append(Paragraph(today, date_style))
 
@@ -276,6 +364,5 @@ def download_cover_letter():
                      mimetype="application/pdf")
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

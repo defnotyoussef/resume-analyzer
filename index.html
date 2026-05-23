@@ -526,18 +526,38 @@
 
     <!-- Score -->
     <div class="score-card fade-in">
-      <div class="score-circle">
-        <svg viewBox="0 0 100 100">
-          <circle class="track" cx="50" cy="50" r="40"/>
-          <circle class="fill" id="score-fill" cx="50" cy="50" r="40"/>
-        </svg>
-        <div class="score-number" id="score-number">0%</div>
-      </div>
-      <div class="score-info">
-        <h3 id="score-label">Match Score</h3>
-        <p id="score-desc">Your CV has been analyzed against the job requirements.</p>
-      </div>
+    <div style="display:flex; gap:40px; align-items:center; flex-wrap:wrap;">
+        <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Original CV</div>
+            <div class="score-circle">
+                <svg viewBox="0 0 100 100">
+                    <circle class="track" cx="50" cy="50" r="40"/>
+                    <circle class="fill" id="original-score-fill" cx="50" cy="50" r="40" style="stroke:#c5c3be;"/>
+                </svg>
+                <div class="score-number" id="original-score-number" style="color:var(--muted);">0%</div>
+            </div>
+        </div>
+
+        <div style="font-size:28px; color:var(--muted);">→</div>
+
+        <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Optimized CV</div>
+            <div class="score-circle">
+                <svg viewBox="0 0 100 100">
+                    <circle class="track" cx="50" cy="50" r="40"/>
+                    <circle class="fill" id="score-fill" cx="50" cy="50" r="40"/>
+                </svg>
+                <div class="score-number" id="score-number">0%</div>
+            </div>
+        </div>
+
+        <div style="flex:1; min-width:160px;">
+            <div id="score-improvement" style="font-size:13px; font-weight:600; color:var(--green); margin-bottom:4px;"></div>
+            <h3 id="score-label" style="font-size:18px; font-weight:600; margin-bottom:4px;">Match Score</h3>
+            <p id="score-desc" style="color:var(--muted); font-size:14px;"></p>
+        </div>
     </div>
+</div>
 
     <!-- Missing skills -->
     <div class="card fade-in">
@@ -562,6 +582,42 @@
       </div>
     </div>
 
+    <div class="card fade-in">
+    <div class="card-label">ATS Compatibility Check</div>
+    <button class="btn-secondary" onclick="checkATS()" id="ats-btn" style="margin-bottom: 16px;">
+        ⚙ Run ATS Check
+    </button>
+    <div id="ats-results" style="display:none;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+            <div style="font-family:'DM Serif Display',serif; font-size:42px;" id="ats-score">0</div>
+            <div>
+                <div style="font-weight:600; margin-bottom:2px;">ATS Score</div>
+                <div style="font-size:13px; color:var(--muted);" id="ats-verdict"></div>
+            </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Keywords Found</div>
+            <div class="tags" id="ats-found"></div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Keywords Missing</div>
+            <div class="tags" id="ats-missing"></div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Formatting Issues</div>
+            <div id="ats-issues"></div>
+        </div>
+
+        <div>
+            <div style="font-size:12px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">What's Working</div>
+            <div id="ats-good"></div>
+        </div>
+    </div>
+</div>
+
     <!-- Cover Letter -->
     <div class="card fade-in">
       <div class="card-label">Cover Letter</div>
@@ -579,6 +635,15 @@
           Copy Text
         </button>
       </div>
+    </div>
+
+  <!-- Interview Questions -->
+    <div class="card fade-in">
+        <div class="card-label">Interview Preparation</div>
+        <button class="btn-secondary" onclick="getInterviewQuestions()" id="interview-btn" style="margin-bottom:16px;">
+            ✦ Generate Interview Questions
+        </button>
+        <div id="interview-results" style="display:none;"></div>
     </div>
 
   </div>
@@ -600,26 +665,44 @@
     document.querySelector(".upload-zone p").textContent = "Click to change file";
   }
 
-  function setScore(score) {
+  function setScore(originalScore, newScore) {
     const circumference = 251;
-    const offset = circumference - (score / 100) * circumference;
-    document.getElementById("score-fill").style.strokeDashoffset = offset;
-    document.getElementById("score-number").textContent = score + "%";
+
+    // Original score
+    const originalOffset = circumference - (originalScore / 100) * circumference;
+    document.getElementById("original-score-fill").style.strokeDashoffset = originalOffset;
+    document.getElementById("original-score-number").textContent = originalScore + "%";
+
+    // New score
+    const newOffset = circumference - (newScore / 100) * circumference;
+    document.getElementById("score-fill").style.strokeDashoffset = newOffset;
+    document.getElementById("score-number").textContent = newScore + "%";
+
+    // Improvement
+    const improvement = newScore - originalScore;
+    const improvEl = document.getElementById("score-improvement");
+    if (improvement > 0) {
+        improvEl.textContent = `↑ +${improvement}% improvement`;
+        improvEl.style.color = "var(--green)";
+    } else {
+        improvEl.textContent = "Already well matched!";
+        improvEl.style.color = "var(--muted)";
+    }
 
     let label, desc, color;
-    if (score >= 80) {
-      label = "Strong Match"; desc = "Your CV is well-aligned with this role."; color = "#1a6b3c";
-    } else if (score >= 60) {
-      label = "Good Match"; desc = "A few tweaks and you're a strong candidate."; color = "#b45309";
+    if (newScore >= 80) {
+        label = "Strong Match"; desc = "Your optimized CV is well-aligned with this role."; color = "#1a6b3c";
+    } else if (newScore >= 60) {
+        label = "Good Match"; desc = "A few tweaks and you're a strong candidate."; color = "#b45309";
     } else {
-      label = "Needs Work"; desc = "The rewritten CV below significantly improves your chances."; color = "#c0392b";
+        label = "Needs Work"; desc = "Keep applying — the rewritten CV significantly improves your chances."; color = "#c0392b";
     }
 
     document.getElementById("score-label").textContent = label;
     document.getElementById("score-desc").textContent = desc;
     document.getElementById("score-fill").style.stroke = color;
     document.getElementById("score-number").style.color = color;
-  }
+}
 
   async function analyze() {
     const file = document.getElementById("cv-file").files[0];
@@ -642,7 +725,7 @@
       const res = await fetch("/analyze", { method: "POST", body: formData });
       const data = await res.json();
 
-      setTimeout(() => setScore(data.match_score), 100);
+      setTimeout(() => setScore(data.original_score, data.match_score), 100);
 
       document.getElementById("missing-skills").innerHTML =
         data.missing_skills.map(s => `<span class="tag tag-red">${s}</span>`).join("");
@@ -708,6 +791,51 @@
     btn.disabled = false;
   }
 
+  async function checkATS() {
+    if (!rewrittenCV) { alert("Please analyze your CV first!"); return; }
+
+    const btn = document.getElementById("ats-btn");
+    btn.textContent = "Checking...";
+    btn.disabled = true;
+
+    const res = await fetch("/ats-check", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            cv: rewrittenCV,
+            job_description: jobDescSnapshot
+        })
+    });
+
+    const data = await res.json();
+
+    document.getElementById("ats-results").style.display = "block";
+
+    const score = data.ats_score;
+    const scoreEl = document.getElementById("ats-score");
+    scoreEl.textContent = score + "%";
+    scoreEl.style.color = score >= 80 ? "var(--green)" : score >= 60 ? "#b45309" : "var(--red)";
+
+    document.getElementById("ats-verdict").textContent = data.verdict;
+
+    document.getElementById("ats-found").innerHTML =
+        data.keyword_matches.map(k => `<span class="tag tag-blue">${k}</span>`).join("");
+
+    document.getElementById("ats-missing").innerHTML =
+        data.keyword_missing.map(k => `<span class="tag tag-red">${k}</span>`).join("");
+
+    document.getElementById("ats-issues").innerHTML =
+        data.formatting_issues.length > 0
+        ? data.formatting_issues.map(i => `<div class="improvement-item" style="color:var(--red);">${i}</div>`).join("")
+        : "<div style='font-size:13px; color:var(--green);'>No major formatting issues found!</div>";
+
+    document.getElementById("ats-good").innerHTML =
+        data.formatting_good.map(g => `<div class="improvement-item" style="color:var(--green);">${g}</div>`).join("");
+
+    btn.textContent = "⚙ Re-run ATS Check";
+    btn.disabled = false;
+}
+
   async function downloadCoverLetter() {
     const text = document.getElementById("cover-letter").textContent;
     const res = await fetch("/download-cover-letter", {
@@ -728,6 +856,54 @@
     btn.textContent = "Copied!";
     setTimeout(() => btn.textContent = "Copy Text", 2000);
   }
+
+  async function getInterviewQuestions() {
+    if (!rewrittenCV) { alert("Please analyze your CV first!"); return; }
+
+    const btn = document.getElementById("interview-btn");
+    btn.textContent = "Generating...";
+    btn.disabled = true;
+
+    const res = await fetch("/interview-questions", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            cv: rewrittenCV,
+            job_description: jobDescSnapshot
+        })
+    });
+
+    const data = await res.json();
+    const container = document.getElementById("interview-results");
+    container.style.display = "block";
+
+    container.innerHTML = data.questions.map((q, i) => `
+        <div style="border:1px solid var(--border); border-radius:8px; margin-bottom:12px; overflow:hidden;">
+            <div style="padding:14px 16px; background:var(--accent-light); font-weight:600; font-size:14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="toggleAnswer(${i})">
+                <span>Q${i+1}. ${q.question}</span>
+                <span id="arrow-${i}" style="color:var(--muted); font-size:12px;">▼</span>
+            </div>
+            <div id="answer-${i}" style="display:none; padding:14px 16px; font-size:14px; color:#444; line-height:1.7; border-top:1px solid var(--border);">
+                ${q.answer}
+            </div>
+        </div>
+    `).join("");
+
+    btn.textContent = "✦ Regenerate Questions";
+    btn.disabled = false;
+}
+
+function toggleAnswer(i) {
+    const answer = document.getElementById(`answer-${i}`);
+    const arrow = document.getElementById(`arrow-${i}`);
+    if (answer.style.display === "none") {
+        answer.style.display = "block";
+        arrow.textContent = "▲";
+    } else {
+        answer.style.display = "none";
+        arrow.textContent = "▼";
+    }
+}
 </script>
 </body>
 </html>
