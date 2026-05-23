@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 import fitz
 from openai import OpenAI
+from groq import Groq
 import json
 import re
 import io
@@ -14,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-client = OpenAI(api_key=os.environ.get("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 @app.route("/")
 def index():
@@ -31,7 +32,7 @@ def analyze():
         cv_text += page.get_text()
 
     original_score_response = client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": "You are a recruiter. Score how well this CV matches the job description from 0-100. Respond with a single number only, nothing else."},
             {"role": "user", "content": f"CV:\n{cv_text}\n\nJOB DESCRIPTION:\n{job_description}"}
@@ -45,7 +46,7 @@ def analyze():
         original_score = 0
 
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": """You are an aggressive CV optimizer and expert recruiter.
 Your job is to REWRITE the CV to maximize the candidate's match for the specific job description.
@@ -226,7 +227,7 @@ def cover_letter():
     job_description = data["job_description"]
 
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": """You are an expert cover letter writer.
 Write a compelling, personalized cover letter based on the CV and job description provided.
@@ -254,7 +255,7 @@ def ats_check():
     job_description = data["job_description"]
 
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": """You are an ATS (Applicant Tracking System) expert.
 Analyze the CV for ATS compatibility and keyword matching against the job description.
@@ -290,7 +291,7 @@ def interview_questions():
     job_description = data["job_description"]
 
     response = client.chat.completions.create(
-        model="deepseek-chat",
+        model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": """You are an expert interview coach.
 Based on the CV and job description generate the 8 most likely interview questions with strong suggested answers.
